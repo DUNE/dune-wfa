@@ -1,0 +1,133 @@
+--------------
+describe requests
+--------------
+
++------------+------------------------------------------------------------------------------------------+------+-----+---------+----------------+
+| Field      | Type                                                                                     | Null | Key | Default | Extra          |
++------------+------------------------------------------------------------------------------------------+------+-----+---------+----------------+
+| request_id | mediumint(8) unsigned                                                                    | NO   | PRI | NULL    | auto_increment |
+| state      | enum('draft','submitted','approved','running','paused','checking','completed','deleted') | NO   |     | NULL    |                |
+| name       | varchar(255)                                                                             | NO   |     | NULL    |                |
+| created    | datetime                                                                                 | NO   |     | NULL    |                |
+| submitted  | datetime                                                                                 | YES  |     | NULL    |                |
+| approved   | datetime                                                                                 | YES  |     | NULL    |                |
+| checking   | datetime                                                                                 | YES  |     | NULL    |                |
+| completed  | datetime                                                                                 | YES  |     | NULL    |                |
++------------+------------------------------------------------------------------------------------------+------+-----+---------+----------------+
+--------------
+describe stages
+--------------
+
++------------------+-----------------------+------+-----+---------+-------+
+| Field            | Type                  | Null | Key | Default | Extra |
++------------------+-----------------------+------+-----+---------+-------+
+| request_id       | mediumint(8) unsigned | NO   | PRI | NULL    |       |
+| stage_id         | tinyint(3) unsigned   | NO   | PRI | NULL    |       |
+| min_inputs       | tinyint(3) unsigned   | NO   |     | NULL    |       |
+| max_inputs       | tinyint(3) unsigned   | NO   |     | NULL    |       |
+| max_wall_seconds | mediumint(8) unsigned | YES  |     | NULL    |       |
+| max_rss_bytes    | bigint(20) unsigned   | YES  |     | NULL    |       |
+| any_location     | tinyint(1)            | NO   |     | 0       |       |
++------------------+-----------------------+------+-----+---------+-------+
+--------------
+describe bootstraps
+--------------
+
++------------+-----------------------+------+-----+---------+-------+
+| Field      | Type                  | Null | Key | Default | Extra |
++------------+-----------------------+------+-----+---------+-------+
+| request_id | mediumint(8) unsigned | NO   | PRI | NULL    |       |
+| stage_id   | tinyint(3) unsigned   | NO   | PRI | NULL    |       |
+| bootstrap  | text                  | NO   |     | NULL    |       |
++------------+-----------------------+------+-----+---------+-------+
+--------------
+describe files
+--------------
+
++------------+---------------------------------------------+------+-----+-------------+----------------+
+| Field      | Type                                        | Null | Key | Default     | Extra          |
++------------+---------------------------------------------+------+-----+-------------+----------------+
+| file_id    | int(10) unsigned                            | NO   | PRI | NULL        | auto_increment |
+| request_id | mediumint(8) unsigned                       | NO   |     | NULL        |                |
+| stage_id   | tinyint(3) unsigned                         | NO   |     | NULL        |                |
+| did        | varchar(255)                                | NO   |     | NULL        |                |
+| state      | enum('unallocated','allocated','processed') | NO   |     | unallocated |                |
++------------+---------------------------------------------+------+-----+-------------+----------------+
+--------------
+describe replicas
+--------------
+
++---------+----------------------+------+-----+---------+-------+
+| Field   | Type                 | Null | Key | Default | Extra |
++---------+----------------------+------+-----+---------+-------+
+| rse_id  | smallint(5) unsigned | NO   |     | NULL    |       |
+| file_id | int(10) unsigned     | NO   |     | NULL    |       |
++---------+----------------------+------+-----+---------+-------+
+--------------
+describe storages
+--------------
+
++----------+----------------------+------+-----+---------+----------------+
+| Field    | Type                 | Null | Key | Default | Extra          |
++----------+----------------------+------+-----+---------+----------------+
+| rse_name | varchar(255)         | NO   |     | NULL    |                |
+| rse_id   | smallint(5) unsigned | NO   | PRI | NULL    | auto_increment |
++----------+----------------------+------+-----+---------+----------------+
+--------------
+describe sites_storages
+--------------
+
++-----------+------------------------------------+------+-----+---------+-------+
+| Field     | Type                               | Null | Key | Default | Extra |
++-----------+------------------------------------+------+-----+---------+-------+
+| site_name | varchar(255)                       | NO   | PRI | NULL    |       |
+| rse_id    | smallint(5) unsigned               | NO   | PRI | NULL    |       |
+| location  | enum('site','nearby','accessible') | NO   |     | site    |       |
++-----------+------------------------------------+------+-----+---------+-------+
+--------------
+SELECT site_name,storages.rse_id,storages.rse_name,sites_storages.location FROM sites_storages 
+ LEFT JOIN storages ON sites_storages.rse_id=storages.rse_id WHERE site_name='UK_Manchester'
+--------------
+
++---------------+--------+-------------+------------+
+| site_name     | rse_id | rse_name    | location   |
++---------------+--------+-------------+------------+
+| UK_Manchester |      1 | FNAL_DCACHE | accessible |
+| UK_Manchester |      2 | MANCHESTER  | site       |
+| UK_Manchester |      3 | RAL_ECHO    | nearby     |
++---------------+--------+-------------+------------+
+--------------
+SELECT requests.request_id,stages.stage_id,requests.name,stages.any_location FROM requests 
+ LEFT JOIN stages ON requests.request_id=stages.request_id ORDER BY requests.request_id,stages.stage_id
+--------------
+
++------------+----------+----------------+--------------+
+| request_id | stage_id | name           | any_location |
++------------+----------+----------------+--------------+
+|          1 |        1 | test request 1 |            0 |
+|          2 |        1 | test request 2 |            1 |
++------------+----------+----------------+--------------+
+--------------
+SELECT files.file_id,files.did,storages.rse_name,files.request_id,stages.stage_id FROM files 
+ LEFT JOIN stages ON files.request_id=stages.request_id AND files.stage_id=stages.stage_id 
+ LEFT JOIN replicas ON files.file_id=replicas.file_id
+ LEFT JOIN storages ON replicas.rse_id=storages.rse_id
+ WHERE files.state='unallocated' AND ((replicas.rse_id=1 AND stages.any_location) OR replicas.rse_id=2 OR replicas.rse_id=3)
+ ORDER BY (replicas.rse_id=2)*3 + (replicas.rse_id=3)*2 + (replicas.rse_id=1) DESC,files.request_id,files.file_id
+--------------
+
++---------+------------+-------------+------------+----------+
+| file_id | did        | rse_name    | request_id | stage_id |
++---------+------------+-------------+------------+----------+
+|       1 | file.01.01 | MANCHESTER  |          1 |        1 |
+|       2 | file.01.02 | MANCHESTER  |          1 |        1 |
+|       3 | file.01.03 | MANCHESTER  |          1 |        1 |
+|       4 | file.02.01 | MANCHESTER  |          2 |        1 |
+|       5 | file.02.02 | MANCHESTER  |          2 |        1 |
+|       6 | file.02.03 | MANCHESTER  |          2 |        1 |
+|       1 | file.01.01 | RAL_ECHO    |          1 |        1 |
+|       3 | file.01.03 | RAL_ECHO    |          1 |        1 |
+|       4 | file.02.01 | RAL_ECHO    |          2 |        1 |
+|       6 | file.02.03 | RAL_ECHO    |          2 |        1 |
+|       4 | file.02.01 | FNAL_DCACHE |          2 |        1 |
++---------+------------+-------------+------------+----------+
