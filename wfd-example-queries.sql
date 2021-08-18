@@ -10,7 +10,8 @@ describe replicas;
 describe storages;
 describe sites_storages;
 
-SELECT site_name,storages.rse_id,storages.rse_name,sites_storages.location FROM sites_storages LEFT JOIN storages ON sites_storages.rse_id=storages.rse_id WHERE site_name='UK_Manchester';
+SELECT site_name,storages.rse_id,storages.rse_name,sites_storages.location FROM sites_storages 
+ LEFT JOIN storages ON sites_storages.rse_id=storages.rse_id WHERE site_name='UK_Manchester';
 
 SELECT requests.request_id,stages.stage_id,requests.name,stages.any_location FROM requests 
  LEFT JOIN stages ON requests.request_id=stages.request_id ORDER BY requests.request_id,stages.stage_id;
