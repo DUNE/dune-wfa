@@ -19,7 +19,7 @@ SELECT files.file_id,files.did,storages.rse_name,files.request_id,stages.stage_i
  LEFT JOIN stages ON files.request_id=stages.request_id AND files.stage_id=stages.stage_id 
  LEFT JOIN replicas ON files.file_id=replicas.file_id
  LEFT JOIN storages ON replicas.rse_id=storages.rse_id
- WHERE (replicas.rse_id=1 AND stages.any_location) OR replicas.rse_id=2 OR replicas.rse_id=3
+ WHERE files.state='unallocated' AND ((replicas.rse_id=1 AND stages.any_location) OR replicas.rse_id=2 OR replicas.rse_id=3)
  ORDER BY (replicas.rse_id=2)*3 + (replicas.rse_id=3)*2 + (replicas.rse_id=1) DESC,files.request_id,files.file_id;
 
  
