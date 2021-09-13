@@ -1,2 +1,2 @@
-# dune-wfd
-DUNE Workflow Dispatcher
+# dune-wfa
+DUNE Workflow Allocator
